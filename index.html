@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>🏆 全班秒刷 (大螢幕主機版)</title>
+  <title>🏆 全班秒刷 (大螢幕主控台版)</title>
   <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco@master/src/cv.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco@master/src/aruco.js"></script>
   <style>
@@ -40,18 +40,18 @@
     <button class="btn" id="camBtn" style="background: #27ae60;" onclick="startCamera()">🎥 2. 開啟鏡頭掃描</button>
     <video id="v" autoplay playsinline muted></video>
     <canvas id="c" style="display:none"></canvas>
-    <div id="res-panel">掃描紀錄：<div id="log-list"></div></div>
+    <div id="res-panel">即時掃描紀錄：<div id="log-list"></div></div>
   </div>
 </div>
 
 <script>
-  // 🌟 使用您提供的 Apps Script 網址
+  // 🌟 使用您在 image_051296 中寫好的 Apps Script 網址
   const API_URL = "https://script.google.com/macros/s/AKfycbwRLe2VvIOZLRlQVNy2VM6eKR13gYDc2mXDpeZuZNL9tDtmdVBkHJZAXeyuDQ9u4n0aVQ/exec";
 
   var v = document.getElementById('v'), c = document.getElementById('c'), ctx = c.getContext('2d');
   var detector, scanActive = false, currentAns = "", scannedMap = {};
 
-  // 從試算表拿題目
+  // 從試算表 QuestionBank 拿題目
   function drawQ() {
     addLog("⏳ 正在從雲端抓取題目...");
     fetch(API_URL + "?action=getQuiz&t=" + Date.now())
@@ -61,10 +61,10 @@
       document.getElementById('options').innerHTML = 
         "(A) "+q.a+" <br>(B) "+q.b+" <br>(C) "+q.c+" <br>(D) "+q.d;
       currentAns = q.ans;
-      scannedMap = {}; // 換題清空
-      addLog("✅ 題目載入成功！答案是 " + currentAns);
+      scannedMap = {}; 
+      addLog("✅ 題目載入成功！");
       
-      // 同步更新 Settings 工作表
+      // 同步更新 Settings 工作表 B3
       let syncUrl = `${API_URL}?action=setQuestion&q=${encodeURIComponent(q.q)}&a=${encodeURIComponent(q.a)}&b=${encodeURIComponent(q.b)}&c=${encodeURIComponent(q.c)}&d=${encodeURIComponent(q.d)}&ans=${encodeURIComponent(q.ans)}&t=${Date.now()}`;
       fetch(syncUrl, {mode: 'no-cors'});
     });
@@ -79,7 +79,7 @@
       document.getElementById('camBtn').innerText = "🛑 停止掃描";
       tick();
     } catch (err) {
-      alert("鏡頭啟動失敗，請確認已點擊『允許』相機權限，或換成 Chrome/Edge 瀏覽器。");
+      alert("鏡頭啟動失敗，請確認已點擊『允許』相機權限。");
     }
   }
 
@@ -95,7 +95,7 @@
           scannedMap[id] = true;
           var ans = ["A","B","C","D"][markers[0].rotation];
           
-          // 回傳成績
+          // 回傳成績到 Responses 工作表
           fetch(`${API_URL}?action=record&id=${id}&ans=${ans}&t=${Date.now()}`, {mode:'no-cors'});
           
           let isCorrect = (ans === currentAns);
