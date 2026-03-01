@@ -2,44 +2,44 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>🏆 全班秒刷 (筆電鏡頭相容版)</title>
+  <title>🚀 全班秒刷 (筆電鏡頭終極相容版)</title>
   <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco@master/src/cv.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco@master/src/aruco.js"></script>
   <style>
-    body { font-family: sans-serif; background: #2c3e50; color: white; text-align: center; margin: 0; padding: 20px; }
-    #question-area { background: white; color: #333; border-radius: 20px; padding: 30px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    body { font-family: sans-serif; background: #2c3e50; color: white; text-align: center; margin: 0; padding: 10px; }
+    #question-area { background: white; color: #333; border-radius: 20px; padding: 25px; margin-bottom: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     #q-text { font-size: 42px; font-weight: bold; color: #d35400; }
-    #opts { font-size: 28px; text-align: left; display: inline-block; line-height: 1.8; margin-top: 15px; }
+    #opts { font-size: 28px; text-align: left; display: inline-block; line-height: 1.8; margin-top: 10px; }
     .btn { font-size: 24px; padding: 15px 40px; cursor: pointer; border-radius: 50px; border: none; background: #f39c12; color: white; font-weight: bold; margin: 5px; }
-    /* 鏡像翻轉：讓操作前鏡頭時左右不再相反 */
-    video { width: 100%; max-width: 500px; border-radius: 15px; border: 4px solid #27ae60; background: #000; margin-top: 15px; transform: scaleX(-1); } 
-    #res { font-size: 22px; margin-top: 15px; color: #2ecc71; font-weight: bold; }
+    /* 鏡像翻轉：讓操作前鏡頭時跟照鏡子一樣自然 */
+    video { width: 100%; max-width: 500px; border-radius: 15px; border: 4px solid #27ae60; background: #000; margin-top: 10px; transform: scaleX(-1); } 
+    #res { font-size: 22px; margin-top: 10px; color: #2ecc71; font-weight: bold; }
   </style>
 </head>
 <body>
 
 <div id="question-area">
-  <div id="q-text">請點擊「隨機抽題」</div>
+  <div id="q-text">請先點擊抽題</div>
   <div id="opts"></div>
 </div>
 
-<button class="btn" onclick="drawQ()">🎲 1. 從試算表抽題</button>
+<button class="btn" onclick="drawQ()">🎲 1. 隨機抽題</button>
 <button class="btn" id="camBtn" onclick="initCamera()" style="background:#27ae60;">🎥 2. 開啟鏡頭</button>
 
 <br>
 <video id="v" autoplay playsinline muted></video>
 <canvas id="c" style="display:none"></canvas>
-<div id="res">🟢 引擎就緒 (筆電專用模式)</div>
+<div id="res">🟢 系統待命 (筆電專用版)</div>
 
 <script>
-  // 使用您 Apps Script 中已正確部署的 ID
+  // 🌟 已帶入您正確的 Apps Script 網址
   const API_URL = "https://script.google.com/macros/s/AKfycbwRLe2VvIOZLRlQVNy2VM6eKR13gYDc2mXDpeZuZNL9tDtmdVBkHJZAXeyuDQ9u4n0aVQ/exec";
   
   var v = document.getElementById('v'), c = document.getElementById('c'), ctx = c.getContext('2d'), rD = document.getElementById('res');
   var detector, scanActive = false, currentAns = "", scannedMap = {};
 
   function drawQ() {
-    rD.innerHTML = "⏳ 正在讀取題庫...";
+    rD.innerHTML = "⏳ 正在讀取雲端題庫...";
     fetch(API_URL + "?action=getQuiz&t=" + Date.now()).then(res => res.json()).then(data => {
       const q = data[0];
       document.getElementById('q-text').innerText = "題目：" + q.q;
@@ -47,24 +47,26 @@
       currentAns = q.ans;
       scannedMap = {};
       rD.innerHTML = "🎯 載入成功！請點擊『開啟鏡頭』";
-    }).catch(e => { rD.innerHTML = "❌ 抽題失敗，請檢查網路"; });
+    }).catch(e => { rD.innerHTML = "❌ 讀取失敗，請確認網路連線"; });
   }
 
   async function initCamera() {
-    rD.innerHTML = "🎥 正在啟動鏡頭...";
+    rD.innerHTML = "🎥 正在強制啟動鏡頭...";
     detector = new AR.Detector();
     try {
-      // 🌟 核心修正：直接請求任何可用的 video，不指定後鏡頭
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // 🌟 最暴力請求：只要是 video 就給我拿過來！不准挑前還是後鏡頭！
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: { ideal: 640 }, height: { ideal: 480 } } 
+      });
       v.srcObject = stream;
       scanActive = true;
       document.getElementById('camBtn').innerText = "🛑 停止掃描";
       document.getElementById('camBtn').style.background = "#e74c3c";
-      rD.innerHTML = "🚀 掃描啟動！請將卡片對準鏡頭";
+      rD.innerHTML = "🚀 掃描已啟動！請將卡片面對鏡頭";
       tick();
     } catch (err) {
-      rD.innerHTML = "❌ 啟動失敗：" + err.name;
-      alert("請確認網址列左側鎖頭已設定『允許相機』");
+      rD.innerHTML = "❌ 錯誤：" + err.name;
+      alert("鏡頭啟動失敗！請嘗試：\n1. 徹底關閉 LINE/Meet 等視訊軟體\n2. 重新開機\n3. 確認網址列左側『鎖頭』是否允許相機");
     }
   }
 
@@ -78,10 +80,9 @@
         var id = markers[0].id;
         if(!scannedMap[id]){
           scannedMap[id] = true;
-          // 計算旋轉角度對應答案
           var ans = ["A","B","C","D"][markers[0].rotation];
           
-          // 回傳紀錄至試算表 Responses 工作表
+          // 紀錄至您的 Responses 工作表
           fetch(`${API_URL}?action=record&id=${id}&ans=${ans}&t=${Date.now()}`, {mode:'no-cors'});
           
           if(ans === currentAns) {
@@ -91,7 +92,7 @@
             rD.innerHTML = `❌ ${id} 號：選了 ${ans}`;
             rD.style.color = "#e74c3c";
           }
-          setTimeout(() => { delete scannedMap[id]; }, 3000);
+          setTimeout(() => { delete scannedMap[id]; }, 4000);
         }
       }
     }
