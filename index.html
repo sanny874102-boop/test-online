@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>🏆 全班秒刷 (終極相機相容版)</title>
+  <title>🏆 全班秒刷 (筆電大螢幕專用版)</title>
   <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco@master/src/cv.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco@master/src/aruco.js"></script>
   <style>
@@ -11,7 +11,7 @@
     #q-text { font-size: 42px; font-weight: bold; color: #d35400; }
     #opts { font-size: 28px; text-align: left; display: inline-block; line-height: 1.8; margin-top: 15px; }
     .btn { font-size: 24px; padding: 15px 40px; cursor: pointer; border-radius: 50px; border: none; background: #f39c12; color: white; font-weight: bold; margin: 5px; }
-    video { width: 100%; max-width: 500px; border-radius: 15px; border: 4px solid #27ae60; background: #000; margin-top: 15px; }
+    video { width: 100%; max-width: 500px; border-radius: 15px; border: 4px solid #27ae60; background: #000; margin-top: 15px; transform: scaleX(-1); } /* 鏡像翻轉，讓操作更直覺 */
     #res { font-size: 22px; margin-top: 15px; color: #2ecc71; font-weight: bold; }
   </style>
 </head>
@@ -28,16 +28,13 @@
 <br>
 <video id="v" autoplay playsinline muted></video>
 <canvas id="c" style="display:none"></canvas>
-<div id="res">🟢 系統待命</div>
+<div id="res">🟢 系統就緒 (筆電模式)</div>
 
 <script>
-  // 🌟 使用您在 image_051296 中寫好的 Apps Script 網址
   const API_URL = "https://script.google.com/macros/s/AKfycbwRLe2VvIOZLRlQVNy2VM6eKR13gYDc2mXDpeZuZNL9tDtmdVBkHJZAXeyuDQ9u4n0aVQ/exec";
-
   var v = document.getElementById('v'), c = document.getElementById('c'), ctx = c.getContext('2d'), rD = document.getElementById('res');
   var detector, scanActive = false, currentAns = "", scannedMap = {};
 
-  // 1. 抽題功能
   function drawQ() {
     rD.innerHTML = "⏳ 讀取試算表中...";
     fetch(API_URL + "?action=getQuiz&t=" + Date.now()).then(res => res.json()).then(data => {
@@ -47,36 +44,25 @@
       currentAns = q.ans;
       scannedMap = {};
       rD.innerHTML = "🎯 載入成功！請點『開啟鏡頭』";
-    }).catch(err => { rD.innerHTML = "❌ 無法讀取題庫"; });
+    });
   }
 
-  // 2. 暴力開啟鏡頭邏輯
   async function initCamera() {
-    rD.innerHTML = "🎥 正在喚醒鏡頭...";
+    rD.innerHTML = "🎥 正在啟動筆電鏡頭...";
     detector = new AR.Detector();
-    
-    // 優先嘗試後鏡頭，失敗則改用預設鏡頭
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      startVideoStream(stream);
-    } catch (e) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        startVideoStream(stream);
-      } catch (err) {
-        rD.innerHTML = "❌ 鏡頭拒絕開啟：" + err.message;
-        alert("請確認：\n1. 網址列左側鎖頭已允許相機\n2. 沒有其他程式(如LINE)在使用相機");
-      }
+      // 🌟 關鍵修正：不再要求 environment，直接請求 video
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      v.srcObject = stream;
+      scanActive = true;
+      document.getElementById('camBtn').innerText = "🛑 停止掃描";
+      document.getElementById('camBtn').style.background = "#e74c3c";
+      rD.innerHTML = "🚀 掃描啟動！請將卡片對準鏡頭";
+      tick();
+    } catch (err) {
+      rD.innerHTML = "❌ 無法啟動鏡頭：" + err.message;
+      alert("請確保已在網址列左側點擊『允許』相機權限。");
     }
-  }
-
-  function startVideoStream(stream) {
-    v.srcObject = stream;
-    scanActive = true;
-    document.getElementById('camBtn').innerText = "🛑 停止掃描";
-    document.getElementById('camBtn').style.background = "#e74c3c";
-    rD.innerHTML = "🚀 掃描中，請對準卡片";
-    tick();
   }
 
   function tick() {
@@ -90,10 +76,7 @@
         if(!scannedMap[id]){
           scannedMap[id] = true;
           var ans = ["A","B","C","D"][markers[0].rotation];
-          
-          // 紀錄成績回 Responses
           fetch(`${API_URL}?action=record&id=${id}&ans=${ans}&t=${Date.now()}`, {mode:'no-cors'});
-          
           rD.innerHTML = (ans === currentAns) ? `✅ ${id} 號答對了！` : `❌ ${id} 號選了 ${ans}`;
           setTimeout(() => { delete scannedMap[id]; }, 3000);
         }
