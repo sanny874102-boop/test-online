@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>🏆 全班秒刷 (筆電大螢幕專用版)</title>
+  <title>🏆 全班秒刷 (筆電鏡頭相容版)</title>
   <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco@master/src/cv.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco@master/src/aruco.js"></script>
   <style>
@@ -11,7 +11,8 @@
     #q-text { font-size: 42px; font-weight: bold; color: #d35400; }
     #opts { font-size: 28px; text-align: left; display: inline-block; line-height: 1.8; margin-top: 15px; }
     .btn { font-size: 24px; padding: 15px 40px; cursor: pointer; border-radius: 50px; border: none; background: #f39c12; color: white; font-weight: bold; margin: 5px; }
-    video { width: 100%; max-width: 500px; border-radius: 15px; border: 4px solid #27ae60; background: #000; margin-top: 15px; transform: scaleX(-1); } /* 鏡像翻轉，讓操作更直覺 */
+    /* 鏡像翻轉：讓操作前鏡頭時左右不再相反 */
+    video { width: 100%; max-width: 500px; border-radius: 15px; border: 4px solid #27ae60; background: #000; margin-top: 15px; transform: scaleX(-1); } 
     #res { font-size: 22px; margin-top: 15px; color: #2ecc71; font-weight: bold; }
   </style>
 </head>
@@ -22,36 +23,38 @@
   <div id="opts"></div>
 </div>
 
-<button class="btn" onclick="drawQ()">🎲 1. 隨機抽題</button>
+<button class="btn" onclick="drawQ()">🎲 1. 從試算表抽題</button>
 <button class="btn" id="camBtn" onclick="initCamera()" style="background:#27ae60;">🎥 2. 開啟鏡頭</button>
 
 <br>
 <video id="v" autoplay playsinline muted></video>
 <canvas id="c" style="display:none"></canvas>
-<div id="res">🟢 系統就緒 (筆電模式)</div>
+<div id="res">🟢 引擎就緒 (筆電專用模式)</div>
 
 <script>
+  // 使用您 Apps Script 中已正確部署的 ID
   const API_URL = "https://script.google.com/macros/s/AKfycbwRLe2VvIOZLRlQVNy2VM6eKR13gYDc2mXDpeZuZNL9tDtmdVBkHJZAXeyuDQ9u4n0aVQ/exec";
+  
   var v = document.getElementById('v'), c = document.getElementById('c'), ctx = c.getContext('2d'), rD = document.getElementById('res');
   var detector, scanActive = false, currentAns = "", scannedMap = {};
 
   function drawQ() {
-    rD.innerHTML = "⏳ 讀取試算表中...";
+    rD.innerHTML = "⏳ 正在讀取題庫...";
     fetch(API_URL + "?action=getQuiz&t=" + Date.now()).then(res => res.json()).then(data => {
       const q = data[0];
       document.getElementById('q-text').innerText = "題目：" + q.q;
       document.getElementById('opts').innerHTML = "(A) "+q.a+"<br>(B) "+q.b+"<br>(C) "+q.c+"<br>(D) "+q.d;
       currentAns = q.ans;
       scannedMap = {};
-      rD.innerHTML = "🎯 載入成功！請點『開啟鏡頭』";
-    });
+      rD.innerHTML = "🎯 載入成功！請點擊『開啟鏡頭』";
+    }).catch(e => { rD.innerHTML = "❌ 抽題失敗，請檢查網路"; });
   }
 
   async function initCamera() {
-    rD.innerHTML = "🎥 正在啟動筆電鏡頭...";
+    rD.innerHTML = "🎥 正在啟動鏡頭...";
     detector = new AR.Detector();
     try {
-      // 🌟 關鍵修正：不再要求 environment，直接請求 video
+      // 🌟 核心修正：直接請求任何可用的 video，不指定後鏡頭
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       v.srcObject = stream;
       scanActive = true;
@@ -60,8 +63,8 @@
       rD.innerHTML = "🚀 掃描啟動！請將卡片對準鏡頭";
       tick();
     } catch (err) {
-      rD.innerHTML = "❌ 無法啟動鏡頭：" + err.message;
-      alert("請確保已在網址列左側點擊『允許』相機權限。");
+      rD.innerHTML = "❌ 啟動失敗：" + err.name;
+      alert("請確認網址列左側鎖頭已設定『允許相機』");
     }
   }
 
@@ -75,9 +78,19 @@
         var id = markers[0].id;
         if(!scannedMap[id]){
           scannedMap[id] = true;
+          // 計算旋轉角度對應答案
           var ans = ["A","B","C","D"][markers[0].rotation];
+          
+          // 回傳紀錄至試算表 Responses 工作表
           fetch(`${API_URL}?action=record&id=${id}&ans=${ans}&t=${Date.now()}`, {mode:'no-cors'});
-          rD.innerHTML = (ans === currentAns) ? `✅ ${id} 號答對了！` : `❌ ${id} 號選了 ${ans}`;
+          
+          if(ans === currentAns) {
+            rD.innerHTML = `✅ ${id} 號：答對了！`;
+            rD.style.color = "#2ecc71";
+          } else {
+            rD.innerHTML = `❌ ${id} 號：選了 ${ans}`;
+            rD.style.color = "#e74c3c";
+          }
           setTimeout(() => { delete scannedMap[id]; }, 3000);
         }
       }
