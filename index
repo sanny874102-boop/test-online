@@ -2,66 +2,84 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>🚀 全班秒刷 (電腦大螢幕版)</title>
+  <title>🏆 全班秒刷 (大螢幕主機版)</title>
   <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco@master/src/cv.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/jcmellado/js-aruco@master/src/aruco.js"></script>
   <style>
-    body { font-family: sans-serif; background: #2c3e50; color: white; text-align: center; padding: 20px; margin: 0; }
-    #question-area { background: #fff; color: #333; border-radius: 20px; padding: 40px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); min-height: 250px; }
-    #q-text { font-size: 48px; font-weight: bold; color: #d35400; }
-    #options { font-size: 32px; text-align: left; display: inline-block; line-height: 1.8; margin-top: 20px; }
-    .btn { font-size: 24px; padding: 15px 40px; cursor: pointer; border-radius: 50px; border: none; background: #f39c12; color: white; font-weight: bold; margin: 5px; }
-    video { width: 480px; border-radius: 15px; border: 4px solid #27ae60; margin-top: 20px; background: #000; }
-    #res { font-size: 24px; margin-top: 15px; font-weight: bold; }
+    body { font-family: -apple-system, sans-serif; background: #2c3e50; color: white; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+    #header { flex: 0 0 auto; margin-bottom: 20px; }
+    #main-container { flex: 1; display: flex; gap: 20px; min-height: 0; }
+    
+    /* 左側題目區 */
+    #question-box { flex: 2; background: white; color: #333; border-radius: 20px; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: center; }
+    #q-text { font-size: 64px; font-weight: bold; color: #d35400; margin-bottom: 30px; }
+    #options { font-size: 42px; line-height: 1.8; text-align: left; margin: 0 auto; }
+    
+    /* 右側控制區 */
+    #sidebar { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+    video { width: 100%; border-radius: 15px; border: 4px solid #27ae60; background: black; }
+    .btn { font-size: 24px; padding: 20px; cursor: pointer; border-radius: 12px; border: none; color: white; font-weight: bold; }
+    #res-panel { flex: 1; background: rgba(0,0,0,0.3); border-radius: 15px; padding: 15px; font-size: 20px; overflow-y: auto; border: 1px solid #444; }
+    .log-entry { margin-bottom: 8px; padding: 5px; border-bottom: 1px solid #555; }
   </style>
 </head>
 <body>
 
-<div id="question-area">
-  <div id="q-text">請點擊「抽題」開始</div>
-  <div id="options"></div>
+<div id="header">
+  <h1>🏫 互動教學大螢幕主控台</h1>
 </div>
 
-<button class="btn" onclick="drawQ()">🎲 1. 從試算表抽題</button>
-<button class="btn" id="camBtn" onclick="startCamera()" style="background:#27ae60;">🎥 2. 開啟鏡頭掃描</button>
+<div id="main-container">
+  <div id="question-box">
+    <div id="q-text">準備就緒，請點擊抽題</div>
+    <div id="options"></div>
+  </div>
 
-<br>
-<video id="v" autoplay playsinline muted></video>
-<canvas id="c" style="display:none"></canvas>
-<div id="res">🟢 系統連線中...</div>
+  <div id="sidebar">
+    <button class="btn" style="background: #f39c12;" onclick="drawQ()">🎲 1. 隨機抽題 (連線試算表)</button>
+    <button class="btn" id="camBtn" style="background: #27ae60;" onclick="startCamera()">🎥 2. 開啟鏡頭掃描</button>
+    <video id="v" autoplay playsinline muted></video>
+    <canvas id="c" style="display:none"></canvas>
+    <div id="res-panel">掃描紀錄：<div id="log-list"></div></div>
+  </div>
+</div>
 
 <script>
-  // 🌟 使用您正確的 Apps Script 網址
+  // 🌟 使用您提供的 Apps Script 網址
   const API_URL = "https://script.google.com/macros/s/AKfycbwRLe2VvIOZLRlQVNy2VM6eKR13gYDc2mXDpeZuZNL9tDtmdVBkHJZAXeyuDQ9u4n0aVQ/exec";
 
-  var v = document.getElementById('v'), c = document.getElementById('c'), ctx = c.getContext('2d'), rD = document.getElementById('res');
+  var v = document.getElementById('v'), c = document.getElementById('c'), ctx = c.getContext('2d');
   var detector, scanActive = false, currentAns = "", scannedMap = {};
 
+  // 從試算表拿題目
   function drawQ() {
-    rD.innerHTML = "⏳ 正在抽題...";
-    fetch(API_URL + "?action=getQuiz&t=" + Date.now()).then(res => res.json()).then(data => {
+    addLog("⏳ 正在從雲端抓取題目...");
+    fetch(API_URL + "?action=getQuiz&t=" + Date.now())
+    .then(res => res.json()).then(data => {
       const q = data[0];
       document.getElementById('q-text').innerText = "題目：" + q.q;
-      document.getElementById('options').innerHTML = "(A) "+q.a+"<br>(B) "+q.b+"<br>(C) "+q.c+"<br>(D) "+q.d;
+      document.getElementById('options').innerHTML = 
+        "(A) "+q.a+" <br>(B) "+q.b+" <br>(C) "+q.c+" <br>(D) "+q.d;
       currentAns = q.ans;
-      scannedMap = {};
-      rD.innerHTML = "✅ 抽題成功！請開啟鏡頭。";
+      scannedMap = {}; // 換題清空
+      addLog("✅ 題目載入成功！答案是 " + currentAns);
+      
+      // 同步更新 Settings 工作表
+      let syncUrl = `${API_URL}?action=setQuestion&q=${encodeURIComponent(q.q)}&a=${encodeURIComponent(q.a)}&b=${encodeURIComponent(q.b)}&c=${encodeURIComponent(q.c)}&d=${encodeURIComponent(q.d)}&ans=${encodeURIComponent(q.ans)}&t=${Date.now()}`;
+      fetch(syncUrl, {mode: 'no-cors'});
     });
   }
 
   async function startCamera() {
     try {
       detector = new AR.Detector();
-      // 🌟 電腦版通常使用 user (視訊鏡頭)
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
       v.srcObject = stream;
       scanActive = true;
-      document.getElementById('camBtn').style.background = "#e74c3c";
       document.getElementById('camBtn').innerText = "🛑 停止掃描";
       tick();
     } catch (err) {
-      rD.innerHTML = "❌ 無法啟動鏡頭：" + err.message + "<br>請檢查是否允許瀏覽器使用相機。";
-      console.error(err);
+      alert("鏡頭啟動失敗，請確認已點擊『允許』相機權限，或換成 Chrome/Edge 瀏覽器。");
     }
   }
 
@@ -76,13 +94,22 @@
         if(!scannedMap[id]){
           scannedMap[id] = true;
           var ans = ["A","B","C","D"][markers[0].rotation];
+          
+          // 回傳成績
           fetch(`${API_URL}?action=record&id=${id}&ans=${ans}&t=${Date.now()}`, {mode:'no-cors'});
-          rD.innerHTML = (ans === currentAns) ? `✅ ${id} 號答對了！` : `❌ ${id} 號選了 ${ans}`;
-          setTimeout(() => { delete scannedMap[id]; }, 3000);
+          
+          let isCorrect = (ans === currentAns);
+          addLog(`${id} 號選 ${ans} - ${isCorrect ? '⭕' : '❌'}`);
+          setTimeout(() => { delete scannedMap[id]; }, 4000);
         }
       }
     }
     requestAnimationFrame(tick);
+  }
+
+  function addLog(msg) {
+    const list = document.getElementById('log-list');
+    list.innerHTML = `<div class="log-entry">${msg}</div>` + list.innerHTML;
   }
 </script>
 </body>
